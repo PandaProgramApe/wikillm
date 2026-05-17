@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ filename }} - WikiLLM</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+        .navbar { background: #1e293b; border-bottom: 1px solid #334155; padding: 12px 32px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
+        .navbar a { color: #38bdf8; text-decoration: none; font-weight: 600; }
+        .navbar a:hover { text-decoration: underline; }
+        .navbar .sep { color: #475569; }
+        .navbar .filename { color: #94a3b8; font-size: 14px; }
+        .content { max-width: 900px; margin: 0 auto; padding: 40px 32px; line-height: 1.8; }
+        .content h1 { font-size: 32px; margin-bottom: 24px; color: #f1f5f9; border-bottom: 1px solid #334155; padding-bottom: 16px; }
+        .content h2 { font-size: 24px; margin-top: 32px; margin-bottom: 16px; color: #e2e8f0; }
+        .content h3 { font-size: 20px; margin-top: 24px; margin-bottom: 12px; color: #cbd5e1; }
+        .content p { margin-bottom: 16px; }
+        .content ul, .content ol { margin: 12px 0 16px 24px; }
+        .content li { margin-bottom: 6px; }
+        .content strong { color: #38bdf8; }
+        .content code { background: #1e293b; padding: 2px 6px; border-radius: 4px; font-size: 14px; }
+        .content pre { background: #1e293b; padding: 16px; border-radius: 8px; overflow-x: auto; margin: 16px 0; }
+        .content pre code { background: none; padding: 0; }
+        .content blockquote { border-left: 3px solid #38bdf8; padding-left: 16px; margin: 16px 0; color: #94a3b8; }
+        .content a { color: #38bdf8; text-decoration: none; }
+        .content a:hover { text-decoration: underline; }
+        .content table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        .content th, .content td { border: 1px solid #334155; padding: 10px 14px; text-align: left; }
+        .content th { background: #1e293b; font-weight: 600; }
+        .content hr { border: none; border-top: 1px solid #334155; margin: 24px 0; }
+        .back-btn { display: inline-block; margin-bottom: 24px; padding: 8px 16px; background: #1e293b; border: 1px solid #334155; color: #94a3b8; border-radius: 8px; text-decoration: none; font-size: 14px; transition: all 0.2s; }
+        .back-btn:hover { border-color: #38bdf8; color: #38bdf8; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/">WikiLLM</a>
+        <span class="sep">/</span>
+        <span class="filename">{{ filename }}</span>
+    </nav>
+    
+    <div class="content">
+        <a href="/" class="back-btn">&larr; 返回首页</a>
+        <div id="wiki-content">{{ content|safe }}</div>
+    </div>
+    
+    <script>
+        // 简单的Markdown渲染（如果内容是纯文本）
+        // 对于已经编译好的Markdown，直接显示
+    </script>
+</body>
+</html>

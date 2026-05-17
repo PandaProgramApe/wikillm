@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WikiLLM - LLM驱动的个人知识库</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+        
+        /* 导航栏 */
+        .navbar { background: #1e293b; border-bottom: 1px solid #334155; padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+        .navbar .logo { font-size: 24px; font-weight: 700; color: #38bdf8; }
+        .navbar .logo span { color: #818cf8; }
+        .navbar .subtitle { font-size: 13px; color: #94a3b8; margin-left: 12px; }
+        .navbar .nav-links { display: flex; gap: 12px; }
+        .navbar .nav-links a { color: #94a3b8; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; transition: all 0.2s; }
+        .navbar .nav-links a:hover { background: #334155; color: #e2e8f0; }
+        .navbar .nav-links a.active { background: #38bdf8; color: #0f172a; font-weight: 600; }
+        
+        /* 标签页 */
+        .tab-container { display: flex; gap: 4px; padding: 0 32px; background: #0f172a; border-bottom: 1px solid #334155; }
+        .tab { padding: 12px 24px; cursor: pointer; color: #94a3b8; font-size: 14px; font-weight: 500; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab:hover { color: #e2e8f0; }
+        .tab.active { color: #38bdf8; border-bottom-color: #38bdf8; }
+        .tab-content { display: none; padding: 32px; }
+        .tab-content.active { display: block; }
+        
+        /* 主内容区 */
+        .container { max-width: 1200px; margin: 0 auto; padding: 32px; }
+        
+        /* 上传区域 */
+        .upload-zone { border: 2px dashed #475569; border-radius: 16px; padding: 48px; text-align: center; cursor: pointer; transition: all 0.3s; background: #1e293b; }
+        .upload-zone:hover, .upload-zone.drag-over { border-color: #38bdf8; background: #1e293b; }
+        .upload-zone .icon { font-size: 48px; margin-bottom: 16px; }
+        .upload-zone h3 { font-size: 18px; margin-bottom: 8px; color: #e2e8f0; }
+        .upload-zone p { color: #94a3b8; font-size: 14px; }
+        .upload-zone .formats { margin-top: 16px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        .upload-zone .format-tag { background: #334155; color: #94a3b8; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+        .file-input { display: none; }
+        
+        /* 处理状态 */
+        .status-bar { display: none; margin-top: 24px; padding: 16px 24px; border-radius: 12px; background: #1e293b; border: 1px solid #334155; }
+        .status-bar.show { display: flex; align-items: center; gap: 12px; }
+        .spinner { width: 20px; height: 20px; border: 2px solid #334155; border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .status-text { font-size: 14px; color: #94a3b8; }
+        
+        /* 处理结果 */
+        .result-card { display: none; margin-top: 24px; padding: 24px; border-radius: 12px; background: #1e293b; border: 1px solid #334155; }
+        .result-card.show { display: block; }
+        .result-card.success { border-color: #22c55e; }
+        .result-card.error { border-color: #ef4444; }
+        .result-card h4 { font-size: 16px; margin-bottom: 12px; }
+        .result-card .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .stat-item { background: #0f172a; padding: 12px; border-radius: 8px; }
+        .stat-item .label { font-size: 12px; color: #94a3b8; }
+        .stat-item .value { font-size: 18px; font-weight: 600; color: #38bdf8; margin-top: 4px; }
+        
+        /* 查询区域 */
+        .query-container { max-width: 800px; }
+        .query-box { position: relative; }
+        .query-input { width: 100%; padding: 16px 60px 16px 20px; border-radius: 12px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-size: 16px; outline: none; transition: border-color 0.2s; }
+        .query-input:focus { border-color: #38bdf8; }
+        .query-input::placeholder { color: #64748b; }
+        .query-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); padding: 8px 16px; background: #38bdf8; color: #0f172a; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; transition: background 0.2s; }
+        .query-btn:hover { background: #7dd3fc; }
+        .query-btn:disabled { background: #475569; cursor: not-allowed; }
+        
+        /* 查询结果 */
+        .query-result { display: none; margin-top: 24px; }
+        .query-result.show { display: block; }
+        .answer-card { padding: 24px; background: #1e293b; border: 1px solid #334155; border-radius: 12px; }
+        .answer-card h4 { color: #38bdf8; margin-bottom: 12px; }
+        .answer-card .answer { line-height: 1.8; white-space: pre-wrap; }
+        .answer-card .sources { margin-top: 16px; padding-top: 16px; border-top: 1px solid #334155; font-size: 13px; color: #94a3b8; }
+        .related-docs { margin-top: 16px; }
+        .related-docs h5 { color: #94a3b8; font-size: 13px; margin-bottom: 8px; }
+        .related-doc { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #0f172a; border-radius: 8px; margin-bottom: 6px; font-size: 13px; cursor: pointer; transition: background 0.2s; }
+        .related-doc:hover { background: #1e293b; }
+        .related-doc .score { background: #334155; color: #38bdf8; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+        
+        /* Wiki页面列表 */
+        .pages-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+        .page-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; }
+        .page-card:hover { border-color: #38bdf8; transform: translateY(-2px); }
+        .page-card h4 { color: #e2e8f0; font-size: 16px; margin-bottom: 8px; }
+        .page-card .meta { display: flex; gap: 12px; font-size: 12px; color: #94a3b8; }
+        .page-card .category { background: #334155; padding: 2px 8px; border-radius: 4px; }
+        .page-card .category.concepts { background: #7c3aed22; color: #a78bfa; }
+        .page-card .category.details { background: #0ea5e922; color: #38bdf8; }
+        .page-card .category.summaries { background: #22c55e22; color: #4ade80; }
+        
+        /* 错误提示 */
+        .error-msg { color: #ef4444; padding: 12px 16px; background: #ef444420; border-radius: 8px; border: 1px solid #ef444440; margin-top: 16px; display: none; }
+        .error-msg.show { display: block; }
+        
+        /* 空状态 */
+        .empty-state { text-align: center; padding: 48px; color: #64748b; }
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .container { padding: 16px; }
+            .navbar { padding: 12px 16px; }
+            .tab-container { padding: 0 16px; }
+            .upload-zone { padding: 32px 16px; }
+            .result-card .stats { grid-template-columns: 1fr; }
+            .pages-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div style="display:flex;align-items:center;">
+            <div class="logo">Wiki<span>LLM</span></div>
+            <span class="subtitle">LLM驱动的个人知识库</span>
+        </div>
+        <div class="nav-links">
+            <a href="#" onclick="switchTab('upload')">上传文档</a>
+            <a href="#" onclick="switchTab('query')">知识查询</a>
+            <a href="#" onclick="switchTab('pages')">知识库</a>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <div class="container">
+        <!-- 上传文档 -->
+        <div id="tab-upload" class="tab-content active">
+            <h2 style="font-size:24px;margin-bottom:8px;">编译文档到知识库</h2>
+            <p style="color:#94a3b8;margin-bottom:24px;">上传文档，LLM将自动分析内容并编译为结构化Wiki知识库页面</p>
+            
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+                <div class="icon">📁</div>
+                <h3>拖放文件到此处或点击上传</h3>
+                <p>支持多种文档格式，LLM将自动处理</p>
+                <div class="formats">
+                    <span class="format-tag">PDF</span>
+                    <span class="format-tag">Word (.docx)</span>
+                    <span class="format-tag">Markdown (.md)</span>
+                    <span class="format-tag">纯文本 (.txt)</span>
+                </div>
+            </div>
+            <input type="file" id="fileInput" class="file-input" accept=".pdf,.docx,.doc,.md,.txt,.text" onchange="handleFileUpload(this.files[0])">
+            
+            <!-- 处理状态 -->
+            <div class="status-bar" id="statusBar">
+                <div class="spinner"></div>
+                <span class="status-text" id="statusText">正在处理文档...</span>
+            </div>
+            
+            <!-- 处理结果 -->
+            <div class="result-card" id="resultCard">
+                <h4 id="resultTitle">处理完成</h4>
+                <div class="stats" id="resultStats"></div>
+            </div>
+            
+            <!-- 错误信息 -->
+            <div class="error-msg" id="errorMsg"></div>
+        </div>
+
+        <!-- 知识查询 -->
+        <div id="tab-query" class="tab-content">
+            <div class="query-container">
+                <h2 style="font-size:24px;margin-bottom:8px;">查询知识库</h2>
+                <p style="color:#94a3b8;margin-bottom:24px;">基于已编译的知识库，向AI提问并获取答案</p>
+                
+                <div class="query-box">
+                    <input type="text" class="query-input" id="queryInput" placeholder="输入你的问题，例如：什么是机器学习？" onkeydown="if(event.key==='Enter')submitQuery()">
+                    <button class="query-btn" id="queryBtn" onclick="submitQuery()">提问</button>
+                </div>
+                
+                <!-- 查询结果 -->
+                <div class="query-result" id="queryResult">
+                    <div class="answer-card">
+                        <h4>AI 回答</h4>
+                        <div class="answer" id="answerContent"></div>
+                        <div class="sources" id="answerSources"></div>
+                    </div>
+                    <div class="related-docs" id="relatedDocs">
+                        <h5>相关文档</h5>
+                        <div id="relatedDocsList"></div>
+                    </div>
+                </div>
+                
+                <div class="error-msg" id="queryError"></div>
+            </div>
+        </div>
+
+        <!-- 知识库页面 -->
+        <div id="tab-pages" class="tab-content">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+                <div>
+                    <h2 style="font-size:24px;margin-bottom:4px;">知识库</h2>
+                    <p style="color:#94a3b8;" id="pageCount">加载中...</p>
+                </div>
+                <button onclick="loadPages()" style="padding:8px 16px;background:#334155;color:#e2e8f0;border:none;border-radius:8px;cursor:pointer;font-size:14px;">刷新</button>
+            </div>
+            
+            <div class="pages-grid" id="pagesGrid">
+                <div class="empty-state">
+                    <div class="icon">📚</div>
+                    <p>知识库为空</p>
+                    <p style="font-size:13px;margin-top:8px;">上传文档开始构建你的知识库</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 标签页切换
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            
+            document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (tab === 'pages') loadPages();
+        }
+
+        // 拖放上传
+        const uploadZone = document.getElementById('uploadZone');
+        uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length) handleFileUpload(e.dataTransfer.files[0]);
+        });
+
+        // 上传并处理文件
+        async function handleFileUpload(file) {
+            if (!file) return;
+            
+            // 检查文件格式
+            const allowedExts = ['.pdf', '.docx', '.doc', '.md', '.txt', '.text'];
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+            if (!allowedExts.includes(ext)) {
+                showError('errorMsg', '不支持的文件格式。支持: ' + allowedExts.join(', '));
+                return;
+            }
+            
+            // 显示状态
+            showStatus('正在上传和处理文档: ' + file.name);
+            hideError('errorMsg');
+            hideResult();
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/upload', { method: 'POST', body: formData });
+                const data = await response.json();
+                
+                if (data.success) {
+                    const r = data.result;
+                    showResult(r);
+                } else {
+                    showError('errorMsg', data.error || '处理失败');
+                }
+            } catch (e) {
+                showError('errorMsg', '请求失败: ' + e.message);
+            }
+            
+            hideStatus();
+        }
+
+        // 提交查询
+        async function submitQuery() {
+            const question = document.getElementById('queryInput').value.trim();
+            if (!question) return;
+            
+            const btn = document.getElementById('queryBtn');
+            btn.disabled = true;
+            btn.textContent = '思考中...';
+            hideError('queryError');
+            
+            try {
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showQueryResult(data.result);
+                } else {
+                    showError('queryError', data.error || '查询失败');
+                }
+            } catch (e) {
+                showError('queryError', '请求失败: ' + e.message);
+            }
+            
+            btn.disabled = false;
+            btn.textContent = '提问';
+        }
+
+        // 加载页面列表
+        async function loadPages() {
+            try {
+                const response = await fetch('/pages');
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderPages(data.pages);
+                }
+            } catch (e) {
+                console.error('加载页面失败:', e);
+            }
+        }
+
+        // 渲染页面列表
+        function renderPages(pages) {
+            document.getElementById('pageCount').textContent = pages.length + ' 个知识页面';
+            const grid = document.getElementById('pagesGrid');
+            
+            if (pages.length === 0) {
+                grid.innerHTML = '<div class="empty-state"><div class="icon">📚</div><p>知识库为空</p><p style="font-size:13px;margin-top:8px;">上传文档开始构建你的知识库</p></div>';
+                return;
+            }
+            
+            grid.innerHTML = pages.map(page => `
+                <div class="page-card" onclick="window.open('/view/${encodeURIComponent(page.title)}.md', '_blank')">
+                    <h4>${escapeHtml(page.title)}</h4>
+                    <div class="meta">
+                        <span class="category ${page.metadata.category || 'details'}">${page.metadata.category || 'details'}</span>
+                        <span>${page.characters} 字符</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 显示查询结果
+        function showQueryResult(result) {
+            document.getElementById('queryResult').classList.add('show');
+            document.getElementById('answerContent').textContent = result.answer;
+            
+            // 显示相关文档
+            const docsList = document.getElementById('relatedDocsList');
+            if (result.keyword_results && result.keyword_results.length > 0) {
+                docsList.innerHTML = result.keyword_results.map(doc => `
+                    <div class="related-doc">
+                        <span>${escapeHtml(doc.title)}</span>
+                        <span class="score">${doc.score}</span>
+                    </div>
+                `).join('');
+                document.getElementById('relatedDocs').style.display = 'block';
+            } else {
+                document.getElementById('relatedDocs').style.display = 'none';
+            }
+        }
+
+        // 显示处理结果
+        function showResult(result) {
+            const card = document.getElementById('resultCard');
+            card.className = 'result-card show success';
+            document.getElementById('resultTitle').textContent = '处理完成';
+            document.getElementById('resultStats').innerHTML = `
+                <div class="stat-item"><div class="label">源文件</div><div class="value">${escapeHtml(result.source_file)}</div></div>
+                <div class="stat-item"><div class="label">输出Wiki</div><div class="value">${escapeHtml(result.output_file)}</div></div>
+                <div class="stat-item"><div class="label">分块数</div><div class="value">${result.chunks_count}</div></div>
+                <div class="stat-item"><div class="label">原文长度</div><div class="value">${result.total_characters.toLocaleString()} 字符</div></div>
+            `;
+        }
+
+        function showStatus(text) { document.getElementById('statusBar').classList.add('show'); document.getElementById('statusText').textContent = text; }
+        function hideStatus() { document.getElementById('statusBar').classList.remove('show'); }
+        function hideResult() { document.getElementById('resultCard').classList.remove('show'); }
+        function showError(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.classList.add('show'); }
+        function hideError(id) { document.getElementById(id).classList.remove('show'); }
+        function escapeHtml(str) { if (!str) return ''; return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        
+        // 页面加载时自动刷新页面列表
+        loadPages();
+    </script>
+</body>
+</html>
